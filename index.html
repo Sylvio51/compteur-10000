@@ -120,18 +120,6 @@
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip { padding: 2px 8px; border-radius: 999px; background: #eef2f7; color: #0f172a; font-size: 12px; }
   .chip.neg { background: #fee2e2; color: #991b1b; }
-  .palette { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-  .swatch { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.1); }
-  .dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 8px;
-    vertical-align: middle;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
-  }
   .actions {
     display: flex;
     gap: 6px;
@@ -199,10 +187,17 @@
           <select id="currentSelect"></select>
         </div>
 
-        <table aria-label="Tableau des joueurs">
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="pointsInput" type="number" value="100" min="1" style="width:120px;padding:8px;border-radius:8px;border:1px solid #e5e7eb;text-align:center" />
+          <button id="addPoints" class="small">Ajouter points</button>
+          <button id="noPoints" class="small ghost">Pas de points (ajouter une croix)</button>
+          <button id="endTurn" class="small">Terminer le tour</button>
+        </div>
+
+        <table aria-label="Tableau des joueurs" style="margin-top:12px">
           <thead>
             <tr>
-              <th>Joueur</th>
+              <th style="width: 28%">Joueur</th>
               <th>Score</th>
               <th>Dernier ajout</th>
               <th>Croix (max 3)</th>
@@ -212,12 +207,7 @@
           <tbody id="playersTbody"></tbody>
         </table>
 
-        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input id="pointsInput" type="number" value="100" min="1" style="width:120px;padding:8px;border-radius:8px;border:1px solid #e5e7eb;text-align:center" />
-          <button id="addPoints" class="small">Ajouter points</button>
-          <button id="noPoints" class="small ghost">Pas de points (ajouter une croix)</button>
-          <button id="endTurn" class="small">Terminer le tour</button>
-        </div>
+        
 
       </section>
 
@@ -232,7 +222,18 @@
   <script>
     (function(){
       const STORAGE_KEY = 'compteur10000_game_v2';
-      const COLORS = ['#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#22c55e','#a855f7'];
+      const COLOR_PALETTE = [
+        { name: 'Rouge', value: '#ef4444' },
+        { name: 'Ambre', value: '#f59e0b' },
+        { name: 'Émeraude', value: '#10b981' },
+        { name: 'Bleu', value: '#3b82f6' },
+        { name: 'Violet', value: '#8b5cf6' },
+        { name: 'Rose', value: '#ec4899' },
+        { name: 'Sarcelle', value: '#14b8a6' },
+        { name: 'Orange', value: '#f97316' },
+        { name: 'Vert', value: '#22c55e' },
+        { name: 'Pourpre', value: '#a855f7' }
+      ];
 
       // DOM
       const playerNameInput = document.getElementById('playerNameInput');
@@ -265,7 +266,7 @@
 
       function uid(){ return Math.random().toString(36).slice(2,9); }
 
-      function defaultColor(index){ return COLORS[index % COLORS.length]; }
+      function defaultColor(index){ return COLOR_PALETTE[index % COLOR_PALETTE.length].value; }
       function pushHistory(player, delta){
         if(!Array.isArray(player.history)) player.history = [];
         player.history.unshift(delta);
@@ -305,9 +306,8 @@
         game.players.forEach((p,i)=>{
           const tr = document.createElement('tr');
           const nameTd = document.createElement('td');
-          const colorDot = document.createElement('span'); colorDot.className = 'dot'; colorDot.style.backgroundColor = p.color || defaultColor(i);
           const nameSpan = document.createElement('span'); nameSpan.textContent = p.name + (i===game.currentIndex? ' ←' : '');
-          nameTd.appendChild(colorDot); nameTd.appendChild(nameSpan);
+          nameTd.appendChild(nameSpan);
           const scoreTd = document.createElement('td'); scoreTd.innerHTML = '<span class="score">'+p.score+'</span>';
           const histTd = document.createElement('td');
           const chips = document.createElement('div'); chips.className='chips';
@@ -323,21 +323,21 @@
           const selBtn = document.createElement('button'); selBtn.className='small ghost'; selBtn.textContent='Jouer'; selBtn.style.background = 'transparent'; selBtn.style.color = p.color; selBtn.style.border = '2px solid '+(p.color||defaultColor(i)); selBtn.onclick = ()=>{ setCurrentByIndex(i); };
           const editBtn = document.createElement('button'); editBtn.className='small'; editBtn.textContent='Renommer'; editBtn.style.background = p.color; editBtn.onclick = ()=>{ const n=prompt('Nom du joueur', p.name); if(n!==null){ p.name=n.trim(); render(); save(); }};
           const delBtn = document.createElement('button'); delBtn.className='small ghost'; delBtn.textContent='Supprimer'; delBtn.style.background = 'transparent'; delBtn.style.color = p.color; delBtn.style.border = '2px solid '+(p.color||defaultColor(i)); delBtn.onclick= ()=>{ if(confirm('Supprimer joueur '+p.name+' ?')){ removePlayer(p.id); }};
-          const adjustBtn = document.createElement('button'); adjustBtn.className='small'; adjustBtn.textContent='Corriger'; adjustBtn.onclick = ()=>{
+          const adjustBtn = document.createElement('button'); adjustBtn.className='small'; adjustBtn.textContent='Corriger'; adjustBtn.style.background = p.color; adjustBtn.onclick = ()=>{
             const v = prompt('Nouveau score pour '+p.name+' (peut être négatif) :', String(p.score));
             if(v===null) return; const n = parseInt(v,10); if(Number.isNaN(n)) return alert('Valeur invalide');
             if(n>10000){ return alert('Le score ne peut pas dépasser 10 000.'); }
             const delta = n - p.score; p.score = n; if(delta!==0) pushHistory(p, delta); save(); render();
           };
-          const palette = document.createElement('div'); palette.className='palette';
-          const presetColors = COLORS;
-          presetColors.forEach(col=>{
-            const s = document.createElement('span'); s.className='swatch'; s.style.background = col; s.title = col;
-            s.onclick = (e)=>{ e.stopPropagation(); p.color = col; save(); render(); };
-            palette.appendChild(s);
+          const colorSelect = document.createElement('select');
+          colorSelect.title = 'Couleur';
+          COLOR_PALETTE.forEach(entry=>{
+            const opt = document.createElement('option'); opt.value = entry.value; opt.textContent = entry.name; opt.style.color = entry.value; colorSelect.appendChild(opt);
           });
+          colorSelect.value = p.color || defaultColor(i);
+          colorSelect.onchange = (e)=>{ p.color = e.target.value; save(); render(); };
 
-          btns.appendChild(selBtn); btns.appendChild(editBtn); btns.appendChild(adjustBtn); btns.appendChild(palette); btns.appendChild(delBtn);
+          btns.appendChild(selBtn); btns.appendChild(editBtn); btns.appendChild(adjustBtn); btns.appendChild(colorSelect); btns.appendChild(delBtn);
           actionsTd.appendChild(btns);
 
           tr.appendChild(nameTd);tr.appendChild(scoreTd);tr.appendChild(histTd);tr.appendChild(crossesTd);tr.appendChild(actionsTd);
@@ -348,6 +348,38 @@
         if(game.finished){ statusEl.textContent = 'Partie terminée — Gagnant : '+(game.players[game.currentIndex]?game.players[game.currentIndex].name:'?'); }
         else if(game.players.length===0) statusEl.textContent = 'Aucun joueur — ajoute des joueurs pour commencer.';
         else statusEl.textContent = 'Au tour de : '+game.players[game.currentIndex].name;
+
+        // appliquer la couleur aux contrôles de points selon le joueur courant
+        applyControlsStyle();
+      }
+
+      function applyControlsStyle(){
+        const hasPlayers = game.players && game.players.length>0;
+        if(!hasPlayers){
+          addPointsBtn.style.background = '';
+          addPointsBtn.style.color = '';
+          addPointsBtn.style.border = '';
+          endTurnBtn.style.background = '';
+          endTurnBtn.style.color = '';
+          endTurnBtn.style.border = '';
+          noPointsBtn.style.background = 'transparent';
+          noPointsBtn.style.color = '';
+          noPointsBtn.style.border = '';
+          pointsInput.style.borderColor = '';
+          return;
+        }
+        const current = game.players[game.currentIndex];
+        const col = current.color || defaultColor(game.currentIndex);
+        addPointsBtn.style.background = col;
+        addPointsBtn.style.color = '#fff';
+        addPointsBtn.style.border = '0';
+        endTurnBtn.style.background = col;
+        endTurnBtn.style.color = '#fff';
+        endTurnBtn.style.border = '0';
+        noPointsBtn.style.background = 'transparent';
+        noPointsBtn.style.color = col;
+        noPointsBtn.style.border = '2px solid '+col;
+        pointsInput.style.borderColor = col;
       }
 
       // game logic
@@ -395,7 +427,7 @@
 
       // buttons
       addPlayerBtn.addEventListener('click', ()=>{ addPlayer(playerNameInput.value||'Joueur'); playerNameInput.value=''; });
-      currentSelect.addEventListener('change', ()=>{ setCurrentByIndex(parseInt(currentSelect.value,10)); });
+      currentSelect.addEventListener('change', ()=>{ setCurrentByIndex(parseInt(currentSelect.value,10)); applyControlsStyle(); });
       addPointsBtn.addEventListener('click', ()=>{ const v = parseInt(pointsInput.value||'0',10)||0; if(v<=0) return; applyAddPoints(v); });
       noPointsBtn.addEventListener('click', ()=>{ applyNoPoints(); });
       endTurnBtn.addEventListener('click', ()=>{ endTurn(); });
