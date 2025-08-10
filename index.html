@@ -2,151 +2,347 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b84ff" />
   <link rel="manifest" href="/manifest.json" />
-  <title>Compteur 10000</title>
-  <style>
-    /* styles.css (petit, inclus ici pour simplicité) */
-    :root{--bg:#f3f6fb;--card:#ffffff;--accent:#0b84ff;--muted:#6b7280}
-    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system,Segoe UI, Roboto, 'Helvetica Neue', Arial}
-    body{background:linear-gradient(180deg,var(--bg),#fff);display:flex;align-items:center;justify-content:center;padding:20px}
-    .app{width:100%;max-width:420px}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-    .card{background:var(--card);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,0.08);padding:18px}
-    h1{margin:0;font-size:20px}
-    .score{font-size:64px;font-weight:700;text-align:center;padding:18px 0}
-    .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-    button{background:var(--accent);color:#fff;border:0;padding:10px 14px;border-radius:10px;font-size:16px;cursor:pointer}
-    button.ghost{background:transparent;color:var(--accent);border:2px solid var(--accent)}
-    .small{padding:8px 10px;font-size:14px}
-    .history{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-    input[type="number"]{width:120px;padding:8px;border-radius:10px;border:1px solid #e5e7eb;text-align:center}
-    footer{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}
-    .row{display:flex;gap:8px;align-items:center}
-    .player{font-size:14px;color:var(--muted)}
-    .actions{display:flex;gap:8px}
-    @media (max-width:420px){.score{font-size:48px}}
-  </style>
+  <title>Compteur 10000 — Partie</title>
+<style>
+  :root {
+    --bg: #f3f6fb;
+    --card: #fff;
+    --accent: #0b84ff;
+    --muted: #6b7280;
+  }
+  html { overflow-x: hidden; width: 100%; max-width: 100vw; overscroll-behavior-x: none; }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial;
+    background: linear-gradient(180deg, var(--bg), #fff);
+    padding: 18px;
+    display: flex;
+    justify-content: center;
+    overflow-x: hidden;
+    max-width: 100vw;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+  .app {
+    width: 100%;
+    max-width: 900px;
+    overflow-x: hidden;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 20px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 8px 24px rgba(10, 10, 20, 0.06);
+    overflow-x: hidden;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .controls { min-width: 0; }
+  .controls > * { min-width: 0; }
+  .players {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+  }
+  
+  input,
+  select,
+  button {
+    font-size: 14px;
+    max-width: 100%;
+  }
+  input[type=text],
+  input[type=number] {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    width: 100%;
+    max-width: 200px;
+  }
+  button {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 0;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  button.ghost {
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    table-layout: fixed;
+  }
+  th, td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: normal;
+    word-break: break-word;
+    hyphens: auto;
+  }
+  .score {
+    font-weight: 700;
+    font-size: 18px;
+  }
+  .crosses {
+    font-size: 18px;
+    color: #d9534f;
+  }
+  .actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .actions { min-width: 0; }
+  .actions > * { min-width: 0; }
+  .small {
+    padding: 6px 8px;
+  }
+  footer {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  @media (max-width: 640px) {
+    body {
+      padding: 10px;
+    }
+    h1 {
+      font-size: 18px;
+    }
+    .controls, 
+    .actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+    .controls button,
+    .actions button {
+      flex: 1 1 auto;
+    }
+    table {
+      font-size: 13px;
+    }
+    th, td {
+      padding: 8px;
+    }
+    input[type=text],
+    input[type=number],
+    select {
+      max-width: 100%;
+    }
+  }
+</style>
+
 </head>
 <body>
   <div class="app">
     <div class="card">
       <header>
         <div>
-          <h1>Compteur 10000</h1>
-          <div class="player">Joueur : <span id="playerName">Maman</span></div>
+          <h1>Compteur 10 000 — Partie</h1>
         </div>
-        <div class="actions">
-          <button id="editName" class="ghost small">Modifier nom</button>
-          <button id="resetAll" class="ghost small">Reset</button>
+        <div class="controls">
+          <button id="newGame" class="ghost small">Nouvelle partie</button>
         </div>
       </header>
 
-      <div class="score" id="score">0</div>
+      <section>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+          <input id="playerNameInput" type="text" placeholder="Nom du joueur" />
+          <button id="addPlayer" class="small">Ajouter joueur</button>
+          <label style="color:var(--muted);font-size:13px">Joueur courant :</label>
+          <select id="currentSelect"></select>
+        </div>
 
-      <div class="row" style="justify-content:center;margin-bottom:12px">
-        <input id="addInput" type="number" value="100" min="1" />
-        <button id="addBtn">Ajouter</button>
-        <button id="undoBtn" class="ghost small">Annuler</button>
-      </div>
+        <table aria-label="Tableau des joueurs">
+          <thead>
+            <tr>
+              <th>Joueur</th>
+              <th>Score</th>
+              <th>Croix (max 3)</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="playersTbody"></tbody>
+        </table>
 
-      <div class="controls">
-        <button class="small" data-add="100">+100</button>
-        <button class="small" data-add="50">+50</button>
-        <button class="small" data-add="25">+25</button>
-        <button class="small" data-add="10">+10</button>
-        <button class="small" data-add="5">+5</button>
-        <button class="small" data-add="1">+1</button>
-      </div>
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="pointsInput" type="number" value="100" min="1" style="width:120px;padding:8px;border-radius:8px;border:1px solid #e5e7eb;text-align:center" />
+          <button id="addPoints" class="small">Ajouter points</button>
+          <button id="noPoints" class="small ghost">Pas de points (ajouter une croix)</button>
+          <button id="endTurn" class="small">Terminer le tour</button>
+        </div>
 
-      <div class="history" id="history"></div>
+      </section>
 
       <footer>
-        <div>Objectif : <strong>10000</strong></div>
-        <div style="margin-top:8px">L'application fonctionne hors-ligne après chargement et peut être ajoutée à l'écran d'accueil.</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <div id="status" style="color:var(--muted)"></div>
+        </div>
       </footer>
     </div>
   </div>
 
   <script>
-    // app.js (inclus inline pour simplicité)
     (function(){
-      const SCORE_KEY = 'compteur10000_score_v1';
-      const HISTORY_KEY = 'compteur10000_history_v1';
-      const NAME_KEY = 'compteur10000_name_v1';
+      const STORAGE_KEY = 'compteur10000_game_v2';
 
-      const scoreEl = document.getElementById('score');
-      const addInput = document.getElementById('addInput');
-      const addBtn = document.getElementById('addBtn');
-      const historyEl = document.getElementById('history');
-      const undoBtn = document.getElementById('undoBtn');
-      const editName = document.getElementById('editName');
-      const playerNameEl = document.getElementById('playerName');
-      const resetAll = document.getElementById('resetAll');
+      // DOM
+      const playerNameInput = document.getElementById('playerNameInput');
+      const addPlayerBtn = document.getElementById('addPlayer');
+      const playersTbody = document.getElementById('playersTbody');
+      const currentSelect = document.getElementById('currentSelect');
+      const pointsInput = document.getElementById('pointsInput');
+      const addPointsBtn = document.getElementById('addPoints');
+      const noPointsBtn = document.getElementById('noPoints');
+      const endTurnBtn = document.getElementById('endTurn');
+      const newGameBtn = document.getElementById('newGame');
+      const statusEl = document.getElementById('status');
 
-      let score = 0;
-      let history = [];
+      // game state
+      let game = {
+        players: [], // {id,name,score,crosses,lockedCrosses:boolean}
+        currentIndex: 0,
+        finished: false
+      };
 
-      function save(){
-        localStorage.setItem(SCORE_KEY, String(score));
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-      }
-      function load(){
-        score = parseInt(localStorage.getItem(SCORE_KEY) || '0', 10) || 0;
-        try{ history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]') }catch(e){ history = [] }
-        const name = localStorage.getItem(NAME_KEY) || 'Maman';
-        playerNameEl.textContent = name;
-      }
+      function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(game)); }
+      function load(){ try{ const s = localStorage.getItem(STORAGE_KEY); if(s) game = JSON.parse(s); }catch(e){ console.error(e); } }
+
+      function uid(){ return Math.random().toString(36).slice(2,9); }
+
+      function addPlayer(name){ if(!name) return; game.players.push({id:uid(), name:name.trim(), score:0, crosses:0, lockedCrosses:false}); render(); save(); }
+
+      function removePlayer(id){ game.players = game.players.filter(p=>p.id!==id); if(game.currentIndex>=game.players.length) game.currentIndex=0; render(); save(); }
+
+      function setCurrentByIndex(i){ if(i<0) i=0; if(i>=game.players.length) i=0; game.currentIndex = i; render(); save(); }
+
       function render(){
-        scoreEl.textContent = score;
-        historyEl.innerHTML = '';
-        history.slice().reverse().forEach((h,i)=>{
-          const b = document.createElement('button');
-          b.className = 'ghost small';
-          b.textContent = (h>0?'+':'')+h;
-          b.title = 'Supprimer cette entrée';
-          b.onclick = ()=>{ if(confirm('Supprimer cette entrée ?')){ history.splice(history.length-1-i,1); recompute(); save(); render(); }};
-          historyEl.appendChild(b);
+        // select
+        currentSelect.innerHTML = '';
+        game.players.forEach((p,i)=>{
+          const o = document.createElement('option'); o.value = i; o.textContent = (i+1)+'. '+p.name; if(i===game.currentIndex) o.selected=true; currentSelect.appendChild(o);
         });
-        undoBtn.disabled = history.length===0;
+
+        // table
+        playersTbody.innerHTML = '';
+        game.players.forEach((p,i)=>{
+          const tr = document.createElement('tr');
+          const nameTd = document.createElement('td'); nameTd.textContent = p.name + (i===game.currentIndex? ' ←' : '');
+          const scoreTd = document.createElement('td'); scoreTd.innerHTML = '<span class="score">'+p.score+'</span>';
+          const crossesTd = document.createElement('td'); crossesTd.innerHTML = '<span class="crosses">'+'✕'.repeat(p.crosses)+'</span>' + (p.lockedCrosses? ' (penalité appliquée)':'');
+          const actionsTd = document.createElement('td');
+          const btns = document.createElement('div'); btns.className='actions';
+
+          const selBtn = document.createElement('button'); selBtn.className='small ghost'; selBtn.textContent='Jouer'; selBtn.onclick = ()=>{ setCurrentByIndex(i); };
+          const editBtn = document.createElement('button'); editBtn.className='small'; editBtn.textContent='Renommer'; editBtn.onclick = ()=>{ const n=prompt('Nom du joueur', p.name); if(n!==null){ p.name=n.trim(); render(); save(); }};
+          const delBtn = document.createElement('button'); delBtn.className='small ghost'; delBtn.textContent='Supprimer'; delBtn.onclick= ()=>{ if(confirm('Supprimer joueur '+p.name+' ?')){ removePlayer(p.id); }};
+
+          btns.appendChild(selBtn); btns.appendChild(editBtn); btns.appendChild(delBtn);
+          actionsTd.appendChild(btns);
+
+          tr.appendChild(nameTd);tr.appendChild(scoreTd);tr.appendChild(crossesTd);tr.appendChild(actionsTd);
+          playersTbody.appendChild(tr);
+        });
+
+        // status
+        if(game.finished){ statusEl.textContent = 'Partie terminée — Gagnant : '+(game.players[game.currentIndex]?game.players[game.currentIndex].name:'?'); }
+        else if(game.players.length===0) statusEl.textContent = 'Aucun joueur — ajoute des joueurs pour commencer.';
+        else statusEl.textContent = 'Au tour de : '+game.players[game.currentIndex].name;
       }
-      function recompute(){ score = history.reduce((a,b)=>a+b,0) }
 
-      // actions
-      addBtn.addEventListener('click', ()=>{
-        const v = parseInt(addInput.value||'0',10) || 0; if(v===0) return;
-        history.push(v); recompute(); save(); render();
-      });
-      undoBtn.addEventListener('click', ()=>{
-        if(history.length===0) return; history.pop(); recompute(); save(); render();
-      });
-      document.querySelectorAll('[data-add]').forEach(btn=>{
-        btn.addEventListener('click', ()=>{ const v=parseInt(btn.getAttribute('data-add'),10); history.push(v); recompute(); save(); render(); });
-      });
+      // game logic
+      function applyAddPoints(points){
+        if(game.finished) return alert('La partie est terminée. Nouvelle partie pour rejouer.');
+        if(game.players.length===0) return alert('Pas de joueur.');
+        const p = game.players[game.currentIndex];
+        const would = p.score + points;
+        if(would>10000){ // rule: if it would exceed, mark 0 points for this turn; no cross added
+          alert('Cet ajout ferait dépasser 10 000 — le joueur ne marque pas de points ce tour (aucune croix ajoutée).');
+          // do not change score, do not add cross
+          return;
+        }
+        // normal add
+        p.score = would;
+        save(); render();
+        // check winning (must be exactly 10000)
+        if(p.score===10000){ game.finished = true; save(); render(); alert('🎉 '+p.name+' a atteint 10 000 et gagne la partie !'); }
+      }
 
-      editName.addEventListener('click', ()=>{
-        const name = prompt('Nom du joueur :', playerNameEl.textContent||'Maman');
-        if(name!==null){ localStorage.setItem(NAME_KEY, name); playerNameEl.textContent = name; }
-      });
+      function applyNoPoints(){
+        if(game.finished) return alert('La partie est terminée.');
+        if(game.players.length===0) return alert('Pas de joueur.');
+        const p = game.players[game.currentIndex];
+        if(p.crosses>=3) return alert('Ce joueur a déjà 3 croix.');
+        p.crosses = Math.min(3, p.crosses+1);
+        // if crosses reach 3 and penalty not yet applied -> apply -1000 immediately
+        if(p.crosses===3 && !p.lockedCrosses){
+          p.score = Math.max(0, p.score - 1000);
+          p.lockedCrosses = true; // ensure penalty only once
+          alert(p.name + ' a atteint 3 croix → -1000 points appliqués.');
+        }
+        save(); render();
+      }
 
-      resetAll.addEventListener('click', ()=>{
-        if(confirm("Réinitialiser le score et l'historique ?")){ history=[]; recompute(); save(); render(); }
-      });
+      function endTurn(){
+        if(game.finished) return alert('La partie est terminée.');
+        if(game.players.length===0) return;
+        // advance currentIndex
+        game.currentIndex = (game.currentIndex + 1) % game.players.length;
+        save(); render();
+      }
 
-      // keyboard shortcuts
+      // buttons
+      addPlayerBtn.addEventListener('click', ()=>{ addPlayer(playerNameInput.value||'Joueur'); playerNameInput.value=''; });
+      currentSelect.addEventListener('change', ()=>{ setCurrentByIndex(parseInt(currentSelect.value,10)); });
+      addPointsBtn.addEventListener('click', ()=>{ const v = parseInt(pointsInput.value||'0',10)||0; if(v<=0) return; applyAddPoints(v); });
+      noPointsBtn.addEventListener('click', ()=>{ applyNoPoints(); });
+      endTurnBtn.addEventListener('click', ()=>{ endTurn(); });
+      newGameBtn.addEventListener('click', ()=>{ if(confirm('Commencer une nouvelle partie ? (toute progression sera perdue)')){ game = {players:[],currentIndex:0,finished:false}; localStorage.removeItem(STORAGE_KEY); render(); }});
+
+      
+
+      // keyboard shortcuts (optionnel)
       window.addEventListener('keydown', (e)=>{
-        if(e.key==='+'||e.key==='=' ) { document.querySelector('[data-add="100"]').click(); }
-        if(e.key==='-'){ undoBtn.click(); }
+        if(e.key==='Enter') addPointsBtn.click();
+        if(e.key===' ') noPointsBtn.click();
       });
 
       // init
       load(); render();
 
-      // register service worker
-      if('serviceWorker' in navigator){
-        navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(()=>console.log('SW failed'));
-      }
+      // service worker
+      if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW reg')).catch(()=>console.log('SW fail')); }
 
     })();
   </script>
