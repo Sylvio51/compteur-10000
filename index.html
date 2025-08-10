@@ -117,6 +117,21 @@
     font-size: 18px;
     color: #d9534f;
   }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { padding: 2px 8px; border-radius: 999px; background: #eef2f7; color: #0f172a; font-size: 12px; }
+  .chip.neg { background: #fee2e2; color: #991b1b; }
+  .palette { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .swatch { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.1); }
+  .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
+  }
   .actions {
     display: flex;
     gap: 6px;
@@ -189,6 +204,7 @@
             <tr>
               <th>Joueur</th>
               <th>Score</th>
+              <th>Dernier ajout</th>
               <th>Croix (max 3)</th>
               <th>Actions</th>
             </tr>
@@ -216,6 +232,7 @@
   <script>
     (function(){
       const STORAGE_KEY = 'compteur10000_game_v2';
+      const COLORS = ['#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#22c55e','#a855f7'];
 
       // DOM
       const playerNameInput = document.getElementById('playerNameInput');
@@ -231,17 +248,46 @@
 
       // game state
       let game = {
-        players: [], // {id,name,score,crosses,lockedCrosses:boolean}
+        players: [], // {id,name,score,crosses,lockedCrosses:boolean,color,history:number[]}
         currentIndex: 0,
         finished: false
       };
 
       function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(game)); }
-      function load(){ try{ const s = localStorage.getItem(STORAGE_KEY); if(s) game = JSON.parse(s); }catch(e){ console.error(e); } }
+      function load(){
+        try{
+          const s = localStorage.getItem(STORAGE_KEY);
+          if(s) game = JSON.parse(s);
+          migrateGame();
+          save();
+        }catch(e){ console.error(e); }
+      }
 
       function uid(){ return Math.random().toString(36).slice(2,9); }
 
-      function addPlayer(name){ if(!name) return; game.players.push({id:uid(), name:name.trim(), score:0, crosses:0, lockedCrosses:false}); render(); save(); }
+      function defaultColor(index){ return COLORS[index % COLORS.length]; }
+      function pushHistory(player, delta){
+        if(!Array.isArray(player.history)) player.history = [];
+        player.history.unshift(delta);
+        if(player.history.length>8) player.history.pop();
+      }
+
+      function migrateGame(){
+        if(!Array.isArray(game.players)) game.players = [];
+        game.players.forEach((p, i)=>{
+          if(typeof p.crosses !== 'number') p.crosses = 0;
+          if(typeof p.lockedCrosses !== 'boolean') p.lockedCrosses = false;
+          if(!p.color) p.color = defaultColor(i);
+          if(!Array.isArray(p.history)) p.history = [];
+        });
+      }
+
+      function addPlayer(name){
+        if(!name) return;
+        const i = game.players.length;
+        game.players.push({id:uid(), name:name.trim(), score:0, crosses:0, lockedCrosses:false, color: defaultColor(i), history: []});
+        render(); save();
+      }
 
       function removePlayer(id){ game.players = game.players.filter(p=>p.id!==id); if(game.currentIndex>=game.players.length) game.currentIndex=0; render(); save(); }
 
@@ -258,20 +304,43 @@
         playersTbody.innerHTML = '';
         game.players.forEach((p,i)=>{
           const tr = document.createElement('tr');
-          const nameTd = document.createElement('td'); nameTd.textContent = p.name + (i===game.currentIndex? ' ←' : '');
+          const nameTd = document.createElement('td');
+          const colorDot = document.createElement('span'); colorDot.className = 'dot'; colorDot.style.backgroundColor = p.color || defaultColor(i);
+          const nameSpan = document.createElement('span'); nameSpan.textContent = p.name + (i===game.currentIndex? ' ←' : '');
+          nameTd.appendChild(colorDot); nameTd.appendChild(nameSpan);
           const scoreTd = document.createElement('td'); scoreTd.innerHTML = '<span class="score">'+p.score+'</span>';
+          const histTd = document.createElement('td');
+          const chips = document.createElement('div'); chips.className='chips';
+          const last = (p.history && p.history.length>0) ? p.history[0] : null;
+          if(last !== null){
+            const c = document.createElement('span'); c.className = 'chip' + (last<0?' neg':''); c.textContent = (last>0?'+':'')+last; chips.appendChild(c);
+          }
+          histTd.appendChild(chips);
           const crossesTd = document.createElement('td'); crossesTd.innerHTML = '<span class="crosses">'+'✕'.repeat(p.crosses)+'</span>' + (p.lockedCrosses? ' (penalité appliquée)':'');
           const actionsTd = document.createElement('td');
           const btns = document.createElement('div'); btns.className='actions';
 
-          const selBtn = document.createElement('button'); selBtn.className='small ghost'; selBtn.textContent='Jouer'; selBtn.onclick = ()=>{ setCurrentByIndex(i); };
-          const editBtn = document.createElement('button'); editBtn.className='small'; editBtn.textContent='Renommer'; editBtn.onclick = ()=>{ const n=prompt('Nom du joueur', p.name); if(n!==null){ p.name=n.trim(); render(); save(); }};
-          const delBtn = document.createElement('button'); delBtn.className='small ghost'; delBtn.textContent='Supprimer'; delBtn.onclick= ()=>{ if(confirm('Supprimer joueur '+p.name+' ?')){ removePlayer(p.id); }};
+          const selBtn = document.createElement('button'); selBtn.className='small ghost'; selBtn.textContent='Jouer'; selBtn.style.background = 'transparent'; selBtn.style.color = p.color; selBtn.style.border = '2px solid '+(p.color||defaultColor(i)); selBtn.onclick = ()=>{ setCurrentByIndex(i); };
+          const editBtn = document.createElement('button'); editBtn.className='small'; editBtn.textContent='Renommer'; editBtn.style.background = p.color; editBtn.onclick = ()=>{ const n=prompt('Nom du joueur', p.name); if(n!==null){ p.name=n.trim(); render(); save(); }};
+          const delBtn = document.createElement('button'); delBtn.className='small ghost'; delBtn.textContent='Supprimer'; delBtn.style.background = 'transparent'; delBtn.style.color = p.color; delBtn.style.border = '2px solid '+(p.color||defaultColor(i)); delBtn.onclick= ()=>{ if(confirm('Supprimer joueur '+p.name+' ?')){ removePlayer(p.id); }};
+          const adjustBtn = document.createElement('button'); adjustBtn.className='small'; adjustBtn.textContent='Corriger'; adjustBtn.onclick = ()=>{
+            const v = prompt('Nouveau score pour '+p.name+' (peut être négatif) :', String(p.score));
+            if(v===null) return; const n = parseInt(v,10); if(Number.isNaN(n)) return alert('Valeur invalide');
+            if(n>10000){ return alert('Le score ne peut pas dépasser 10 000.'); }
+            const delta = n - p.score; p.score = n; if(delta!==0) pushHistory(p, delta); save(); render();
+          };
+          const palette = document.createElement('div'); palette.className='palette';
+          const presetColors = COLORS;
+          presetColors.forEach(col=>{
+            const s = document.createElement('span'); s.className='swatch'; s.style.background = col; s.title = col;
+            s.onclick = (e)=>{ e.stopPropagation(); p.color = col; save(); render(); };
+            palette.appendChild(s);
+          });
 
-          btns.appendChild(selBtn); btns.appendChild(editBtn); btns.appendChild(delBtn);
+          btns.appendChild(selBtn); btns.appendChild(editBtn); btns.appendChild(adjustBtn); btns.appendChild(palette); btns.appendChild(delBtn);
           actionsTd.appendChild(btns);
 
-          tr.appendChild(nameTd);tr.appendChild(scoreTd);tr.appendChild(crossesTd);tr.appendChild(actionsTd);
+          tr.appendChild(nameTd);tr.appendChild(scoreTd);tr.appendChild(histTd);tr.appendChild(crossesTd);tr.appendChild(actionsTd);
           playersTbody.appendChild(tr);
         });
 
@@ -294,6 +363,7 @@
         }
         // normal add
         p.score = would;
+        pushHistory(p, points);
         save(); render();
         // check winning (must be exactly 10000)
         if(p.score===10000){ game.finished = true; save(); render(); alert('🎉 '+p.name+' a atteint 10 000 et gagne la partie !'); }
@@ -305,9 +375,10 @@
         const p = game.players[game.currentIndex];
         if(p.crosses>=3) return alert('Ce joueur a déjà 3 croix.');
         p.crosses = Math.min(3, p.crosses+1);
-        // if crosses reach 3 and penalty not yet applied -> apply -1000 immediately
+        // if crosses reach 3 and penalty not yet applied -> apply -1000 immediately (score peut devenir négatif)
         if(p.crosses===3 && !p.lockedCrosses){
-          p.score = Math.max(0, p.score - 1000);
+          p.score = p.score - 1000;
+          pushHistory(p, -1000);
           p.lockedCrosses = true; // ensure penalty only once
           alert(p.name + ' a atteint 3 croix → -1000 points appliqués.');
         }
