@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b84ff" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>Compteur 10000</title>
+  <style>
+    /* styles.css (petit, inclus ici pour simplicité) */
+    :root{--bg:#f3f6fb;--card:#ffffff;--accent:#0b84ff;--muted:#6b7280}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system,Segoe UI, Roboto, 'Helvetica Neue', Arial}
+    body{background:linear-gradient(180deg,var(--bg),#fff);display:flex;align-items:center;justify-content:center;padding:20px}
+    .app{width:100%;max-width:420px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .card{background:var(--card);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,0.08);padding:18px}
+    h1{margin:0;font-size:20px}
+    .score{font-size:64px;font-weight:700;text-align:center;padding:18px 0}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    button{background:var(--accent);color:#fff;border:0;padding:10px 14px;border-radius:10px;font-size:16px;cursor:pointer}
+    button.ghost{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+    .small{padding:8px 10px;font-size:14px}
+    .history{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    input[type="number"]{width:120px;padding:8px;border-radius:10px;border:1px solid #e5e7eb;text-align:center}
+    footer{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}
+    .row{display:flex;gap:8px;align-items:center}
+    .player{font-size:14px;color:var(--muted)}
+    .actions{display:flex;gap:8px}
+    @media (max-width:420px){.score{font-size:48px}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <header>
+        <div>
+          <h1>Compteur 10000</h1>
+          <div class="player">Joueur : <span id="playerName">Maman</span></div>
+        </div>
+        <div class="actions">
+          <button id="editName" class="ghost small">Modifier nom</button>
+          <button id="resetAll" class="ghost small">Reset</button>
+        </div>
+      </header>
+
+      <div class="score" id="score">0</div>
+
+      <div class="row" style="justify-content:center;margin-bottom:12px">
+        <input id="addInput" type="number" value="100" min="1" />
+        <button id="addBtn">Ajouter</button>
+        <button id="undoBtn" class="ghost small">Annuler</button>
+      </div>
+
+      <div class="controls">
+        <button class="small" data-add="100">+100</button>
+        <button class="small" data-add="50">+50</button>
+        <button class="small" data-add="25">+25</button>
+        <button class="small" data-add="10">+10</button>
+        <button class="small" data-add="5">+5</button>
+        <button class="small" data-add="1">+1</button>
+      </div>
+
+      <div class="history" id="history"></div>
+
+      <footer>
+        <div>Objectif : <strong>10000</strong></div>
+        <div style="margin-top:8px">L'application fonctionne hors-ligne après chargement et peut être ajoutée à l'écran d'accueil.</div>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    // app.js (inclus inline pour simplicité)
+    (function(){
+      const SCORE_KEY = 'compteur10000_score_v1';
+      const HISTORY_KEY = 'compteur10000_history_v1';
+      const NAME_KEY = 'compteur10000_name_v1';
+
+      const scoreEl = document.getElementById('score');
+      const addInput = document.getElementById('addInput');
+      const addBtn = document.getElementById('addBtn');
+      const historyEl = document.getElementById('history');
+      const undoBtn = document.getElementById('undoBtn');
+      const editName = document.getElementById('editName');
+      const playerNameEl = document.getElementById('playerName');
+      const resetAll = document.getElementById('resetAll');
+
+      let score = 0;
+      let history = [];
+
+      function save(){
+        localStorage.setItem(SCORE_KEY, String(score));
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      }
+      function load(){
+        score = parseInt(localStorage.getItem(SCORE_KEY) || '0', 10) || 0;
+        try{ history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]') }catch(e){ history = [] }
+        const name = localStorage.getItem(NAME_KEY) || 'Maman';
+        playerNameEl.textContent = name;
+      }
+      function render(){
+        scoreEl.textContent = score;
+        historyEl.innerHTML = '';
+        history.slice().reverse().forEach((h,i)=>{
+          const b = document.createElement('button');
+          b.className = 'ghost small';
+          b.textContent = (h>0?'+':'')+h;
+          b.title = 'Supprimer cette entrée';
+          b.onclick = ()=>{ if(confirm('Supprimer cette entrée ?')){ history.splice(history.length-1-i,1); recompute(); save(); render(); }};
+          historyEl.appendChild(b);
+        });
+        undoBtn.disabled = history.length===0;
+      }
+      function recompute(){ score = history.reduce((a,b)=>a+b,0) }
+
+      // actions
+      addBtn.addEventListener('click', ()=>{
+        const v = parseInt(addInput.value||'0',10) || 0; if(v===0) return;
+        history.push(v); recompute(); save(); render();
+      });
+      undoBtn.addEventListener('click', ()=>{
+        if(history.length===0) return; history.pop(); recompute(); save(); render();
+      });
+      document.querySelectorAll('[data-add]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{ const v=parseInt(btn.getAttribute('data-add'),10); history.push(v); recompute(); save(); render(); });
+      });
+
+      editName.addEventListener('click', ()=>{
+        const name = prompt('Nom du joueur :', playerNameEl.textContent||'Maman');
+        if(name!==null){ localStorage.setItem(NAME_KEY, name); playerNameEl.textContent = name; }
+      });
+
+      resetAll.addEventListener('click', ()=>{
+        if(confirm("Réinitialiser le score et l'historique ?")){ history=[]; recompute(); save(); render(); }
+      });
+
+      // keyboard shortcuts
+      window.addEventListener('keydown', (e)=>{
+        if(e.key==='+'||e.key==='=' ) { document.querySelector('[data-add="100"]').click(); }
+        if(e.key==='-'){ undoBtn.click(); }
+      });
+
+      // init
+      load(); render();
+
+      // register service worker
+      if('serviceWorker' in navigator){
+        navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(()=>console.log('SW failed'));
+      }
+
+    })();
+  </script>
+</body>
+</html>
